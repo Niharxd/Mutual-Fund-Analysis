@@ -26,10 +26,12 @@ SCHEME_CODE_ALIASES = ("scheme_code", "amfi_code", "amficode", "code")
 
 
 def normalized_column_name(column: Any) -> str:
+    """Normalize a column label for alias-based matching."""
     return re.sub(r"[^a-z0-9]", "", str(column).casefold())
 
 
 def find_column(frame: pd.DataFrame, aliases: tuple[str, ...]) -> Any | None:
+    """Find the first dataframe column matching one of the supplied aliases."""
     normalized_aliases = {normalized_column_name(alias) for alias in aliases}
     return next(
         (column for column in frame.columns if normalized_column_name(column) in normalized_aliases),
@@ -38,6 +40,7 @@ def find_column(frame: pd.DataFrame, aliases: tuple[str, ...]) -> Any | None:
 
 
 def normalized_codes(values: pd.Series) -> set[str]:
+    """Return non-empty scheme codes as comparable strings."""
     codes: set[str] = set()
     for value in values.dropna():
         code = str(value).strip()
@@ -50,10 +53,12 @@ def normalized_codes(values: pd.Series) -> set[str]:
 
 
 def dataset_key(stem: str) -> str:
+    """Remove a numeric source prefix from a CSV filename stem."""
     return re.sub(r"^\d+[_-]*", "", stem.casefold())
 
 
 def data_quality_anomalies(frame: pd.DataFrame) -> list[str]:
+    """Describe basic missing-value, duplicate, and empty-frame anomalies."""
     anomalies: list[str] = []
     missing_cells = int(frame.isna().sum().sum())
     if missing_cells:
@@ -70,6 +75,7 @@ def data_quality_anomalies(frame: pd.DataFrame) -> list[str]:
 
 
 def print_fund_master_attributes(frame: pd.DataFrame) -> None:
+    """Print unique fund-house, category, sub-category, and risk values."""
     print("\nFund master dimensions:", frame.shape)
     for label, aliases in ATTRIBUTE_ALIASES.items():
         column = find_column(frame, aliases)
@@ -81,6 +87,7 @@ def print_fund_master_attributes(frame: pd.DataFrame) -> None:
 
 
 def print_scheme_code_observations(codes: set[str]) -> None:
+    """Summarize observed code lengths and numeric range without decoding IDs."""
     lengths = Counter(map(len, codes))
     numeric_codes = [int(code) for code in codes if code.isdigit()]
     print("\nAMFI scheme-code observations:")
@@ -97,6 +104,7 @@ def print_scheme_code_observations(codes: set[str]) -> None:
 def validate_scheme_codes(
     fund_master: pd.DataFrame | None, nav_history: pd.DataFrame | None
 ) -> None:
+    """Compare fund-master scheme codes against the NAV-history identifiers."""
     print("\nAMFI code validation (fund_master against nav_history):")
     if fund_master is None or nav_history is None:
         print("Not run: both fund_master and nav_history CSVs are required.")
@@ -128,6 +136,7 @@ def validate_scheme_codes(
 
 
 def inspect_csv_directory(raw_dir: Path) -> None:
+    """Profile every top-level CSV and summarize basic quality checks."""
     csv_paths = sorted(raw_dir.glob("*.csv"))
     if not csv_paths:
         raise FileNotFoundError(
@@ -176,6 +185,7 @@ def inspect_csv_directory(raw_dir: Path) -> None:
 
 
 def main() -> None:
+    """Parse command-line options and inspect the raw data directory."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--raw-dir",

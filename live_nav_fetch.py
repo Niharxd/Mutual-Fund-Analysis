@@ -29,12 +29,14 @@ SCHEMES = (
 
 
 def safe_filename(name: str) -> str:
+    """Convert a scheme name to a portable filename component."""
     return re.sub(r"[^a-z0-9]+", "_", name.casefold()).strip("_")
 
 
 def fetch_scheme(
     scheme_code: int, scheme_name: str, output_dir: Path
 ) -> Path:
+    """Fetch one MFAPI NAV history, validate identity, and save the raw records."""
     response = requests.get(
         API_URL.format(scheme_code=scheme_code),
         timeout=(10, 60),
@@ -88,6 +90,7 @@ def fetch_schemes(
     schemes: tuple[tuple[int, str], ...] = SCHEMES,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> list[Path]:
+    """Fetch the configured schemes and return paths to their saved CSV files."""
     fetched_at = datetime.now(timezone.utc).isoformat()
     print(f"Fetch started (UTC): {fetched_at}")
     paths = [fetch_scheme(code, name, output_dir) for code, name in schemes]
@@ -96,6 +99,7 @@ def fetch_schemes(
 
 
 def main() -> None:
+    """Parse the output directory and fetch the configured scheme histories."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",

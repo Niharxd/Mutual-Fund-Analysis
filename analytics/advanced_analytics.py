@@ -293,3 +293,18 @@ def run_all() -> dict[str, pd.DataFrame]:
         "sector_hhi": hhi,
         "sharpe": sharpe,
     }
+
+
+def main() -> None:
+    """Run advanced analytics and print a compact output summary."""
+    results = run_all()
+    print(
+        f"Advanced analytics complete: {results['var_cvar']['amfi_code'].nunique()} schemes; "
+        f"{len(results['returns']):,} observed daily-return rows."
+    )
+    print(f"VaR/CVaR report: {REPORTS / 'var_cvar_report.csv'}")
+    print(f"Rolling Sharpe chart: {REPORTS / 'rolling_sharpe_chart.png'}")
+
+
+if __name__ == "__main__":
+    main()

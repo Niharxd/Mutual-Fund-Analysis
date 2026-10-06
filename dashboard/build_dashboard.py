@@ -24,10 +24,12 @@ PALETTE = [BLUE, TEAL, "#F2A541", "#CC5C5C", "#7868A6", "#76A5AF"]
 
 
 def read_csv(name: str, **kwargs: object) -> pd.DataFrame:
+    """Read one processed dataset using the dashboard data directory."""
     return pd.read_csv(DATA / name, **kwargs)
 
 
 def format_axis(ax: plt.Axes, title: str) -> None:
+    """Apply shared title, grid, and spine styling to a chart axis."""
     ax.set_title(title, loc="left", fontsize=12, fontweight="bold", color=NAVY, pad=9)
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", alpha=0.2)
@@ -35,6 +37,7 @@ def format_axis(ax: plt.Axes, title: str) -> None:
 
 
 def save_page(fig: plt.Figure, number: int, title: str, subtitle: str) -> Path:
+    """Add page branding, export a PNG, and return its path."""
     fig.suptitle(title, x=0.055, y=0.975, ha="left", fontsize=21, fontweight="bold", color=NAVY)
     fig.text(0.055, 0.938, subtitle, ha="left", fontsize=9, color="#5C6878")
     logo = OffsetImage(plt.imread(LOGO), zoom=0.55)
@@ -61,6 +64,7 @@ def save_page(fig: plt.Figure, number: int, title: str, subtitle: str) -> Path:
 
 
 def build_industry_page() -> tuple[plt.Figure, dict[str, float | str]]:
+    """Build the industry overview export and return its KPI values."""
     aum = read_csv("03_aum_by_fund_house.csv", parse_dates=["date"])
     sip = read_csv("04_monthly_sip_inflows.csv")
     folios = read_csv("06_industry_folio_count.csv")
@@ -120,6 +124,7 @@ def build_industry_page() -> tuple[plt.Figure, dict[str, float | str]]:
 
 
 def build_performance_page() -> plt.Figure:
+    """Build scheme return, scorecard, NAV, and benchmark views."""
     perf = read_csv("07_scheme_performance.csv")
     score = pd.read_csv(OUTPUT / "fund_scorecard.csv")
     nav = read_csv("02_nav_history.csv", parse_dates=["date"])
@@ -179,6 +184,7 @@ def build_performance_page() -> plt.Figure:
 
 
 def build_investor_page() -> plt.Figure:
+    """Build transaction sample summaries by state, type, age, and month."""
     tx = read_csv("08_investor_transactions.csv", parse_dates=["transaction_date"])
     sip = tx.loc[tx["transaction_type"].str.casefold().eq("sip")].copy()
     fig, axes = plt.subplots(2, 2, figsize=(16, 9))
@@ -213,6 +219,7 @@ def build_investor_page() -> plt.Figure:
 
 
 def build_trends_page() -> plt.Figure:
+    """Build SIP, category-flow, benchmark, and folio trend charts."""
     sip = read_csv("04_monthly_sip_inflows.csv")
     categories = read_csv("05_category_inflows.csv")
     folios = read_csv("06_industry_folio_count.csv")
@@ -266,6 +273,7 @@ def build_trends_page() -> plt.Figure:
 
 
 def main() -> None:
+    """Generate four static dashboard page images and their companion PDF."""
     PAGE_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     sns.set_theme(style="whitegrid", font="DejaVu Sans")

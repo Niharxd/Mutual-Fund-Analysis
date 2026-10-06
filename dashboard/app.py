@@ -32,6 +32,7 @@ st.set_page_config(
 
 @st.cache_data(show_spinner="Loading project datasets…")
 def load_data() -> dict[str, pd.DataFrame]:
+    """Load the processed tables and scorecard for dashboard use."""
     datasets = {
         "funds": pd.read_csv(DATA / "01_fund_master.csv", dtype={"amfi_code": str}),
         "nav": pd.read_csv(DATA / "02_nav_history.csv", dtype={"amfi_code": str}, parse_dates=["date"]),
@@ -59,15 +60,18 @@ def load_data() -> dict[str, pd.DataFrame]:
 
 
 def money_cr(value: float) -> str:
+    """Format a crore-denominated value for compact dashboard labels."""
     return f"₹{value:,.0f} Cr"
 
 
 def page_header(title: str, description: str) -> None:
+    """Render a page title and concise data-coverage note."""
     st.title(title)
     st.caption(description)
 
 
 def industry_overview(data: dict[str, pd.DataFrame]) -> None:
+    """Render industry AUM, SIP, folio, and AMC snapshot visualizations."""
     page_header(
         "Industry Overview",
         "Latest available industry and AMC source snapshots. These totals are distinct from the 40-scheme performance sample.",
@@ -144,6 +148,7 @@ def industry_overview(data: dict[str, pd.DataFrame]) -> None:
 
 
 def fund_performance(data: dict[str, pd.DataFrame]) -> None:
+    """Render filtered fund returns, scorecard, NAV, and benchmark comparisons."""
     page_header(
         "Fund Performance",
         "Filter the supplied 40-scheme sample, inspect its scorecard, and compare indexed NAV and benchmark levels.",
@@ -264,6 +269,7 @@ def fund_performance(data: dict[str, pd.DataFrame]) -> None:
 
 
 def investor_analytics(data: dict[str, pd.DataFrame]) -> None:
+    """Render transaction sample summaries with geographic and demographic filters."""
     page_header(
         "Investor Analytics",
         "Explore the supplied investor transaction records. This sample currently spans January 2024 through May 2025.",
@@ -349,6 +355,7 @@ def investor_analytics(data: dict[str, pd.DataFrame]) -> None:
 
 
 def sip_and_market_trends(data: dict[str, pd.DataFrame]) -> None:
+    """Render SIP, NIFTY 50, FY25 category-flow, and folio trends."""
     page_header(
         "SIP & Market Trends",
         "SIP inflows and folios are available through December 2025; category inflow data covers FY2025 only.",
@@ -440,6 +447,7 @@ def sip_and_market_trends(data: dict[str, pd.DataFrame]) -> None:
 
 
 def main() -> None:
+    """Configure the Streamlit theme and route selection to the dashboard pages."""
     st.markdown(
         f"""
         <style>

@@ -8,6 +8,7 @@ from analytics.advanced_analytics import daily_returns, read_sources, recommend_
 
 
 def main() -> None:
+    """Compute risk-adjusted fund recommendations for a selected risk appetite."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--risk-appetite",

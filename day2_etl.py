@@ -55,6 +55,7 @@ FUND_KEY = "amfi_code"
 
 
 def parse_date_column(values: pd.Series, column_name: str) -> pd.Series:
+    """Parse a date series and raise with examples if any non-null value is invalid."""
     parsed = pd.to_datetime(values, format="mixed", errors="coerce")
     invalid = values.notna() & parsed.isna()
     if invalid.any():
@@ -64,10 +65,16 @@ def parse_date_column(values: pd.Series, column_name: str) -> pd.Series:
 
 
 def normalize_token(value: Any) -> str:
+    """Normalize text for matching transaction and KYC categories."""
     return re.sub(r"[^a-z0-9 ]", "", str(value).strip().casefold())
 
 
 def clean_nav(frame: pd.DataFrame) -> pd.DataFrame:
+    """Validate NAV rows, deduplicate keys, and forward-fill daily calendar gaps."""
+    # MFAPI's live_nav_fetch.py uses ``scheme_code``; the Day 1 dataset uses
+    # ``amfi_code``. Normalize the live-fetcher name before validation.
+    if "amfi_code" not in frame.columns and "scheme_code" in frame.columns:
+        frame = frame.rename(columns={"scheme_code": "amfi_code"})
     required = {"amfi_code", "date", "nav"}
     if not required.issubset(frame.columns):
         raise ValueError(f"nav_history is missing columns: {sorted(required - set(frame.columns))}")
@@ -109,6 +116,7 @@ def clean_nav(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_transactions(frame: pd.DataFrame) -> pd.DataFrame:
+    """Normalize transaction fields and discard invalid or non-positive amounts."""
     required = {"transaction_date", "transaction_type", "amount_inr", "kyc_status", "amfi_code"}
     if not required.issubset(frame.columns):
         raise ValueError(
@@ -147,6 +155,7 @@ def clean_transactions(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_performance(frame: pd.DataFrame) -> pd.DataFrame:
+    """Validate numeric performance fields and flag suspicious metric values."""
     required = set(PERFORMANCE_NUMERIC_COLUMNS)
     if not required.issubset(frame.columns):
         raise ValueError(f"scheme_performance is missing numeric columns: {sorted(required - set(frame.columns))}")
@@ -167,7 +176,7 @@ def clean_performance(frame: pd.DataFrame) -> pd.DataFrame:
     expense_invalid = ~result["expense_ratio_pct"].between(0.1, 2.5, inclusive="both")
     if expense_invalid.any():
         warnings.warn(
-            f"{int(expense_invalid.sum())} expense ratio value(s) fall outside 0.1%–2.5%.",
+            f"{int(expense_invalid.sum())} expense ratio value(s) fall outside 0.1%-2.5%.",
             stacklevel=2,
         )
 
@@ -192,6 +201,7 @@ def clean_performance(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_dataset(name: str, frame: pd.DataFrame) -> pd.DataFrame:
+    """Apply dataset-specific cleaning and date normalization."""
     if name == "nav_history":
         return clean_nav(frame)
     if name == "investor_transactions":
@@ -212,6 +222,7 @@ def clean_dataset(name: str, frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_cleaned_datasets(raw_dir: Path, processed_dir: Path) -> dict[str, pd.DataFrame]:
+    """Clean the expected ten source CSVs and write processed counterparts."""
     source_paths = sorted(path for path in raw_dir.glob("*.csv") if path.name != ".gitkeep")
     if len(source_paths) != 10:
         raise ValueError(f"Expected the 10 Day 1 CSV files in {raw_dir}; found {len(source_paths)}.")
@@ -242,11 +253,13 @@ def load_cleaned_datasets(raw_dir: Path, processed_dir: Path) -> dict[str, pd.Da
 
 
 def date_key(values: pd.Series) -> pd.Series:
+    """Convert dates to integer YYYYMMDD keys for relational fact tables."""
     parsed = pd.to_datetime(values, errors="raise")
     return parsed.dt.strftime("%Y%m%d").astype("int64")
 
 
 def build_star_tables(data: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """Build date/fund dimensions and fact tables from cleaned source frames."""
     date_values: list[pd.Series] = []
     for frame in data.values():
         for column in (*DATE_COLUMNS, "month"):
@@ -299,6 +312,7 @@ def build_star_tables(data: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
 
 
 def reset_schema(connection: Any) -> None:
+    """Execute the project's SQL schema statements on an open connection."""
     statements = [part.strip() for part in SCHEMA_PATH.read_text(encoding="utf-8").split(";")]
     for statement in statements:
         if statement:
@@ -306,12 +320,14 @@ def reset_schema(connection: Any) -> None:
 
 
 def load_database(data: dict[str, pd.DataFrame], database_path: Path) -> None:
+    """Load source and star-schema tables, then validate counts and foreign keys."""
     star = build_star_tables(data)
     database_path.parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(f"sqlite:///{database_path}")
 
     @event.listens_for(engine, "connect")
     def enable_foreign_keys(dbapi_connection: sqlite3.Connection, _: Any) -> None:
+        """Enable SQLite foreign-key checks for every newly opened connection."""
         dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
     source_tables = {f"src_{name}": frame for name, frame in data.items()}
@@ -349,11 +365,13 @@ def load_database(data: dict[str, pd.DataFrame], database_path: Path) -> None:
 
 
 def run(raw_dir: Path = RAW_DIR, processed_dir: Path = PROCESSED_DIR, database_path: Path = DATABASE_PATH) -> None:
+    """Run cleaning, processed-file exports, and the SQLite database load."""
     data = load_cleaned_datasets(raw_dir, processed_dir)
     load_database(data, database_path)
 
 
 def main() -> None:
+    """Parse ETL paths from the command line and run the local pipeline stage."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw-dir", type=Path, default=RAW_DIR)
     parser.add_argument("--processed-dir", type=Path, default=PROCESSED_DIR)

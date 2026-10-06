@@ -9,3 +9,5 @@ requests
 scipy
 jupyter
 streamlit
+python-pptx
+reportlab
